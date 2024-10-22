@@ -1,11 +1,11 @@
 import copy
 
+from collections import OrderedDict
 from django.db import models
 from django.db.models.fields import NOT_PROVIDED
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-from django.utils.datastructures import SortedDict
-from django.utils.translation import get_language, ugettext_lazy as _
+from django.utils.translation import get_language, gettext_lazy as _
 
 
 LANGUAGE_CODE = 0
@@ -18,8 +18,11 @@ def get_languages():
 
 def get_real_fieldname(field, lang=None):
     if lang is None:
-        lang = get_language().split('-')[0]  # both 'en-US' and 'en' -> 'en'
-    return str('%s_%s' % (field, lang))
+        try:
+            lang = get_language().split('-')[0]  # both 'en-US' and 'en' -> 'en'
+        except AttributeError:
+            lang = 'en'
+    return str('{}_{}'.format(field, lang))
 
 
 def get_field_language(real_field):
@@ -113,12 +116,12 @@ class TransMeta(models.base.ModelBase):
     '''
 
     def __new__(cls, name, bases, attrs):
-        attrs = SortedDict(attrs)
+        attrs = OrderedDict(attrs)
         if 'Meta' in attrs and hasattr(attrs['Meta'], 'translate'):
             fields = attrs['Meta'].translate
             delattr(attrs['Meta'], 'translate')
         else:
-            new_class = super(TransMeta, cls).__new__(cls, name, bases, attrs)
+            new_class = super().__new__(cls, name, bases, attrs)
             # we inherits possible translatable_fields from superclasses
             abstract_model_bases = [base for base in bases if hasattr(base, '_meta') \
                                     and base._meta.abstract]
@@ -158,17 +161,17 @@ class TransMeta(models.base.ModelBase):
             del attrs[field]
             attrs[field] = property(default_value(field))
 
-        new_class = super(TransMeta, cls).__new__(cls, name, bases, attrs)
+        new_class = super().__new__(cls, name, bases, attrs)
         if hasattr(new_class, '_meta'):
             new_class._meta.translatable_fields = fields
         return new_class
 
 
-class LazyString(object):
+class LazyString:
 
     def __init__(self, proxy, lang):
         self.proxy = proxy
         self.lang = lang
 
-    def __unicode__(self):
-        return u'%s (%s)' % (self.proxy, self.lang)
+    def __str__(self):
+        return '{} ({})'.format(self.proxy, self.lang)

@@ -79,7 +79,7 @@ class Command(BaseCommand):
         found_db_change_fields = False
         for model in all_models:
             if hasattr(model._meta, 'translatable_fields'):
-                model_full_name = '%s.%s' % (model._meta.app_label, model._meta.module_name)
+                model_full_name = '{}.{}'.format(model._meta.app_label, model._meta.module_name)
                 translatable_fields = get_all_translatable_fields(model, column_in_current_table=True)
                 db_table = model._meta.db_table
                 for field_name in translatable_fields:
@@ -113,8 +113,8 @@ class Command(BaseCommand):
             if not has_transmeta_default_language:
                 variable = 'LANGUAGE_CODE'
             if getattr(settings, variable) != default_language:
-                print (('\n\nYou should change in your settings '
-                       'the %s variable to "%s"' % (variable, default_language)))
+                print ('\n\nYou should change in your settings '
+                       'the %s variable to "%s"' % (variable, default_language))
 
     def get_table_fields(self, db_table):
         """ get table fields from schema """
@@ -137,7 +137,7 @@ class Command(BaseCommand):
             if get_real_fieldname(field_name, lang_code) not in db_table_fields:
                 yield lang_code
         for db_table_field in db_table_fields:
-            pattern = re.compile('^%s_(?P<lang>\w{2})$' % field_name)
+            pattern = re.compile(r'^%s_(?P<lang>\w{2})$' % field_name)
             m = pattern.match(db_table_field)
             if not m:
                 continue
@@ -204,18 +204,18 @@ class Command(BaseCommand):
             not_null = style.SQL_KEYWORD('NOT NULL')
 
             if 'mysql' in backend.__name__:
-                alter_colum_set = 'MODIFY %s %s' % (qn(field_column), col_type)
+                alter_colum_set = 'MODIFY {} {}'.format(qn(field_column), col_type)
                 not_null = style.SQL_KEYWORD('NULL')
                 if default_f:
-                    alter_colum_drop = 'MODIFY %s %s' % (qn(field_column), col_type)
+                    alter_colum_drop = 'MODIFY {} {}'.format(qn(field_column), col_type)
 
             # column creation
             if not new_field in db_table_fields:
-                sql_output.append("ALTER TABLE %s ADD COLUMN %s" % (qn(db_table), ' '.join(field_sql)))
+                sql_output.append("ALTER TABLE {} ADD COLUMN {}".format(qn(db_table), ' '.join(field_sql)))
 
             if lang == self.default_lang and not was_translatable_before:
                 # data copy from old field (only for default language)
-                sql_output.append("UPDATE %s SET %s = %s" % (qn(db_table), \
+                sql_output.append("UPDATE {} SET {} = {}".format(qn(db_table), \
                                     qn(field_column), qn(field_name)))
                 if not f.null:
                     # changing to NOT NULL after having data copied
@@ -231,13 +231,13 @@ class Command(BaseCommand):
                         continue
                     if not f_required:
                         # data copy from old field (only for default language)
-                        sql_output.append(("UPDATE %(db_table)s SET %(f_colum)s = '%(value_default)s' "
+                        sql_output.append("UPDATE %(db_table)s SET %(f_colum)s = '%(value_default)s' "
                                     "WHERE %(f_colum)s is %(null)s or %(f_colum)s = '' " %  
                                         {'db_table': qn(db_table),
                                         'f_colum': qn(field_column),
                                         'value_default': self.get_value_default(),
                                         'null': style.SQL_KEYWORD('NULL'),
-                                        }))
+                                        })
                         # changing to NOT NULL after having data copied
                         sql_output.append("ALTER TABLE %s %s %s" % \
                                         (qn(db_table), alter_colum_set, \
@@ -247,10 +247,10 @@ class Command(BaseCommand):
                                                            field_column,
                                                            value_not_implemented=True)
                     if f_required:
-                        sql_output.append(("ALTER TABLE %s %s %s" % 
-                                        (qn(db_table), alter_colum_drop, not_null)))
+                        sql_output.append("ALTER TABLE %s %s %s" % 
+                                        (qn(db_table), alter_colum_drop, not_null))
 
         if not was_translatable_before:
             # we drop field only if field was no translatable before
-            sql_output.append("ALTER TABLE %s DROP COLUMN %s" % (qn(db_table), qn(field_name)))
+            sql_output.append("ALTER TABLE {} DROP COLUMN {}".format(qn(db_table), qn(field_name)))
         return sql_output
