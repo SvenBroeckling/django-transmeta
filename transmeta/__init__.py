@@ -79,11 +79,14 @@ def default_value(field):
 
     def default_value_func(self):
         attname = lambda x: get_real_fieldname(field, x)
+        # get_language() is None while translations are deactivated, e.g. under
+        # translation.override(None) when the admin builds its change messages.
+        language = get_language() or settings.LANGUAGE_CODE
 
-        if getattr(self, attname(get_language()), None):
-            result = getattr(self, attname(get_language()))
-        elif getattr(self, attname(get_language()[:2]), None):
-            result = getattr(self, attname(get_language()[:2]))
+        if getattr(self, attname(language), None):
+            result = getattr(self, attname(language))
+        elif getattr(self, attname(language[:2]), None):
+            result = getattr(self, attname(language[:2]))
         else:
             default_language = fallback_language()
             if getattr(self, attname(default_language), None):
